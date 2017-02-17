@@ -1,4 +1,6 @@
 import random, math
+import sys
+from pip._vendor.requests.packages.chardet.latin1prober import ASS
 
 
 
@@ -15,6 +17,7 @@ class Node():
         self.leftChild = None
         self.rightChild = None
         self.height = 0 
+        self.num_hijos = 0
     
     def __str__(self):
         return str(self.key) + "(" + str(self.height) + ")"
@@ -163,6 +166,10 @@ class AVLTree():
         else:
             if node.height != node.max_children_height() + 1:
                 raise Exception ("Invalid height for node " + str(node) + ": " + str(node.height) + " instead of " + str(node.max_children_height() + 1) + "!")
+            
+            num_hijos_nodo = (node.leftChild.num_hijos + 1 if node.leftChild else 0) + (node.rightChild.num_hijos + 1 if node.rightChild else 0)
+            if node.num_hijos != num_hijos_nodo:
+                raise Exception ("Invalid num_ijos para node " + str(node) + ": " + str(node.num_hijos) + " instead of " + str(num_hijos_nodo) + "!")
                 
             balFactor = node.balance()
             # Test the balance factor
@@ -195,6 +202,14 @@ class AVLTree():
             old_height = node.height
             node.height = (node.max_children_height() + 1 if (node.rightChild or node.leftChild) else 0)
             changed = node.height != old_height
+            node = node.parent
+        
+        self.recomputa_num_hijos(start_from_node)
+    
+    def recomputa_num_hijos(self, starteando):
+        node = starteando
+        while node:
+            node.num_hijos = (node.leftChild.num_hijos + 1 if node.leftChild else 0) + (node.rightChild.num_hijos + 1 if node.rightChild else 0)
             node = node.parent
        
     def add_as_child (self, parent_node, child_node):
@@ -230,6 +245,10 @@ class AVLTree():
         
         if node_to_rebalance:
             self.rebalance (node_to_rebalance)
+        else:
+            self.recomputa_num_hijos(child_node)
+
+        
     
     def insert (self, key):
         new_node = Node (key)
@@ -239,6 +258,8 @@ class AVLTree():
             if not self.find(key):
                 self.elements_count += 1
                 self.add_as_child (self.rootNode, new_node)
+                
+#        print("el num d ijos d root %u" % self.rootNode.num_hijos)
       
     def find_biggest(self, start_node):
         node = start_node
@@ -467,7 +488,63 @@ class AVLTree():
                 level = level_next
                 out_string += level_string                    
         return out_string
-
+    
+    def recorrer_in_order_de_reversa_mami(self, num_posiciones):
+        num_en_pos = sys.maxsize
+        num_recorridos = -1
+        ya_imprimidos = set()
+        num_ant = 0
+        
+        nodo_act = self.rootNode
+        num_ant = nodo_act.key
+        
+        while(nodo_act):
+            if(nodo_act.key not in ya_imprimidos):
+#                print("you could be mine %u" % nodo_act.key)
+                ya_imprimidos.add(nodo_act.key)
+                num_recorridos += 1
+                if(num_recorridos == num_posiciones):
+                    num_en_pos = nodo_act.key
+                    break
+            if(nodo_act.leftChild and nodo_act.leftChild.key not in ya_imprimidos): 
+                nodo_act = nodo_act.leftChild
+                while(nodo_act.rightChild):
+                    nodo_act = nodo_act.rightChild
+            else:
+                nodo_act = nodo_act.parent
+                
+            assert num_ant >= nodo_act.key, "ke bergha el ant %u el act %u" % (num_ant, nodo_act.key)
+        
+        return num_en_pos
+                    
+    def recorrer_in_order(self, num_posiciones):
+        num_en_pos = sys.maxsize
+        num_recorridos = -1
+        ya_imprimidos = set()
+        num_ant = 0
+        
+        nodo_act = self.rootNode
+        num_ant = nodo_act.key
+        
+        while(nodo_act):
+            if(nodo_act.key not in ya_imprimidos):
+#                print("you could be mine %u" % nodo_act.key)
+                ya_imprimidos.add(nodo_act.key)
+                num_recorridos += 1
+                if(num_recorridos == num_posiciones):
+                    num_en_pos = nodo_act.key
+                    break
+            if(nodo_act.rightChild and nodo_act.rightChild.key not in ya_imprimidos): 
+                nodo_act = nodo_act.rightChild
+                while(nodo_act.leftChild):
+                    nodo_act = nodo_act.leftChild
+            else:
+                nodo_act = nodo_act.parent
+                
+            assert num_ant <= nodo_act.key, "ke bergha el ant %u el act %u" % (num_ant, nodo_act.key)
+        
+        return num_en_pos
+                                     
 if __name__ == "__main__":    
     """check empty tree creation"""
     a = AVLTree ()
@@ -476,9 +553,17 @@ if __name__ == "__main__":
     """check not empty tree creation"""
     seq = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     seq_copy = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    # random.shuffle(seq)
+    random.shuffle(seq)
+    print("shufleado %s" % seq)
     b = AVLTree (seq)
+    print("q mierda %s root %u" % (b.rootNode.num_hijos, b.rootNode.key))
     b.sanity_check()
+    ass = b.recorrer_in_order_de_reversa_mami(2)
+    print("una mierda reversa %u" % ass);
+    ass = b.recorrer_in_order(2)
+    print("una mierda %u" % ass);
+    
+#    sys.exit(0)
     
     """check that inorder traversal on an AVL tree 
     (and on a binary search tree in the whole) 
@@ -487,15 +572,19 @@ if __name__ == "__main__":
     
     """check that node deletion works"""
     c = AVLTree (random_data_generator (10000))
+    print("kha? %s num elems %u" % (c.rootNode.num_hijos, c.elements_count))
     before_deletion = c.elements_count
     for i in random_data_generator (1000):
         c.remove(i)
     after_deletion = c.elements_count
     c.sanity_check()
     assert (before_deletion >= after_deletion)
+    
+    ass = c.recorrer_in_order_de_reversa_mami(18)
+    print("una mierda %u" % ass);
+    assert (ass <= c.rootNode.key)
     # print c.out()
     
     """check that an AVL tree's height is strictly less than 
     1.44*log2(N+2)-1 (there N is number of elements)"""
     assert (c.height() < 1.44 * math.log(after_deletion + 2, 2) - 1)
-    print("kha?")
