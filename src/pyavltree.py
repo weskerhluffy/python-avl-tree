@@ -1,7 +1,5 @@
 import random, math
 import sys
-from pip._vendor.requests.packages.chardet.latin1prober import ASS
-
 
 
 def random_data_generator (max_r):
